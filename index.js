@@ -1,19 +1,25 @@
+const express = require('express')
 const cors = require('cors')
 const morgan = require('morgan')
-const express = require('express')
 
 const app = express()
 
 app.use(express.json())
+app.use(cors())
+app.use(express.static('dist'))
+
 morgan.token('body', (request) => {
   return request.method === 'POST'
     ? JSON.stringify(request.body)
     : ''
 })
-app.use(cors())
+
 app.use(
-  morgan(':method :url :status :res[content-length] - :response-time ms :body')
+  morgan(
+    ':method :url :status :res[content-length] - :response-time ms :body'
+  )
 )
+
 let persons = [
   {
     id: 1,
@@ -37,34 +43,32 @@ let persons = [
   },
 ]
 
-// Ejercicio 3.1
+// 3.1: obtener todas las personas
 app.get('/api/persons', (request, response) => {
   response.json(persons)
 })
 
-// Ejercicio 3.2
+// 3.2: información de la agenda
 app.get('/info', (request, response) => {
-  const currentDate = new Date()
-
   response.send(`
     <p>Phonebook has info for ${persons.length} people</p>
-    <p>${currentDate}</p>
+    <p>${new Date()}</p>
   `)
 })
 
-// Ejercicio 3.3
+// 3.3: obtener una persona
 app.get('/api/persons/:id', (request, response) => {
   const id = Number(request.params.id)
   const person = persons.find((person) => person.id === id)
 
-  if (person) {
-    response.json(person)
-  } else {
-    response.status(404).end()
+  if (!person) {
+    return response.status(404).end()
   }
+
+  response.json(person)
 })
 
-// Ejercicio 3.4
+// 3.4: eliminar una persona
 app.delete('/api/persons/:id', (request, response) => {
   const id = Number(request.params.id)
 
@@ -73,18 +77,18 @@ app.delete('/api/persons/:id', (request, response) => {
   response.status(204).end()
 })
 
-// Ejercicios 3.5 y 3.6
+// 3.5 y 3.6: crear una persona y validar errores
 app.post('/api/persons', (request, response) => {
-  const body = request.body
+  const { name, number } = request.body
 
-  if (!body.name || !body.number) {
+  if (!name || !number) {
     return response.status(400).json({
       error: 'name or number is missing',
     })
   }
 
   const nameExists = persons.some(
-    (person) => person.name === body.name
+    (person) => person.name.toLowerCase() === name.toLowerCase()
   )
 
   if (nameExists) {
@@ -95,13 +99,13 @@ app.post('/api/persons', (request, response) => {
 
   const person = {
     id: Math.floor(Math.random() * 1000000),
-    name: body.name,
-    number: body.number,
+    name,
+    number,
   }
 
   persons = persons.concat(person)
 
-  response.json(person)
+  response.status(201).json(person)
 })
 
 const PORT = process.env.PORT || 3001
